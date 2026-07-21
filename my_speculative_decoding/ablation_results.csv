@@ -1,0 +1,16 @@
+prompt,K,acceptance_rate,ar_tokens_per_s,sd_tokens_per_s,speedup
+def fibonacci(n):,2,0.7059,56.38,72.762,1.291
+def fibonacci(n):,3,0.5556,56.38,62.011,1.1
+def fibonacci(n):,4,0.3906,56.38,48.339,0.857
+def fibonacci(n):,5,0.4833,56.38,54.101,0.96
+def fibonacci(n):,8,0.3409,56.38,43.04,0.763
+"Once upon a time in a quiet village,",2,0.6389,76.729,75.963,0.99
+"Once upon a time in a quiet village,",3,0.5778,76.729,63.258,0.824
+"Once upon a time in a quiet village,",4,0.3906,76.729,55.599,0.725
+"Once upon a time in a quiet village,",5,0.4667,76.729,59.986,0.782
+"Once upon a time in a quiet village,",8,0.3295,76.729,52.476,0.684
+The capital of France is,2,0.6765,64.512,66.949,1.038
+The capital of France is,3,0.5556,64.512,59.388,0.921
+The capital of France is,4,0.6818,64.512,69.085,1.071
+The capital of France is,5,0.5273,64.512,58.907,0.913
+The capital of France is,8,0.3409,64.512,40.477,0.627
