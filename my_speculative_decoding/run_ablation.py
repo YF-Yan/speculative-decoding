@@ -25,10 +25,12 @@ PROMPTS = [
     "Once upon a time in a quiet village,",
     "The capital of France is",
 ]
-K_LIST = [2, 3, 4, 5, 8]
+# K_LIST = [2, 3, 4, 5, 8] # k消融
+K = 2
 MAX_NEW_TOKENS = 40
-TEMPERATURE = 0.7
-OUT_CSV = Path("ablation_results.csv")
+# TEMPERATURE = 0.7
+TEMP_LIST = [0.0,0.3, 0.5, 0.7,0.9,1] # 温度消融
+OUT_CSV = Path("ablation_temp.csv")
 
 
 def main() -> None:
@@ -37,21 +39,23 @@ def main() -> None:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    draft = AutoModelForCausalLM.from_pretrained(DRAFT_NAME).to(device).eval()
-    target = AutoModelForCausalLM.from_pretrained(TARGET_NAME).to(device).eval()
+    dtype = torch.float16 if device == "cuda" else torch.float32
+    draft = AutoModelForCausalLM.from_pretrained(DRAFT_NAME,torch_dtype=dtype).to(device).eval()
+    target = AutoModelForCausalLM.from_pretrained(TARGET_NAME,torch_dtype=dtype).to(device).eval()
 
     rows = []
     for prompt in PROMPTS:
         input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
 
-        t0 = time.perf_counter()
-        ar_out = autoregressive_generate(
-            input_ids, target, max_new_tokens=MAX_NEW_TOKENS, temperature=TEMPERATURE
-        )
-        t_ar = time.perf_counter() - t0
-        ar_tps = (ar_out.size(1) - input_ids.size(1)) / t_ar
+        for TEMPERATURE in TEMP_LIST:
+            t0 = time.perf_counter()
+            ar_out = autoregressive_generate(
+                input_ids, target, max_new_tokens=MAX_NEW_TOKENS, temperature=TEMPERATURE, use_kv_cache=True
+            )
+            t_ar = time.perf_counter() - t0
+            ar_tps = (ar_out.size(1) - input_ids.size(1)) / t_ar
 
-        for K in K_LIST:
+
             t0 = time.perf_counter()
             sd_out, acc = speculative_generate(
                 input_ids,
@@ -60,6 +64,7 @@ def main() -> None:
                 K=K,
                 max_new_tokens=MAX_NEW_TOKENS,
                 temperature=TEMPERATURE,
+                use_kv_cache=True,
             )
             t_sd = time.perf_counter() - t0
             sd_tps = (sd_out.size(1) - input_ids.size(1)) / t_sd
@@ -67,6 +72,7 @@ def main() -> None:
                 {
                     "prompt": prompt[:40],
                     "K": K,
+                    "temperature": TEMPERATURE,
                     "acceptance_rate": round(acc, 4),
                     "ar_tokens_per_s": round(ar_tps, 3),
                     "sd_tokens_per_s": round(sd_tps, 3),
