@@ -27,12 +27,27 @@ def max_fn(x: Tensor) -> Tensor:
 def sample_from_probs(probs: Tensor) -> int:
     return int(torch.multinomial(probs, num_samples=1).item())
 
-
-def _next_token_probs(model: Module, ids: Tensor, temperature: float) -> Tensor:
-    logits = model(ids).logits[0, -1].float()
-    if temperature != 1.0:
-        logits = logits / max(temperature, 1e-6)
-    return F.softmax(logits, dim=-1)
+# 消融，增加kvc选择参数
+def _next_token_probs(
+    model: Module,
+    ids: Tensor,
+    temperature: float,
+    *,
+    past=None,
+    use_kv_cache:bool=False,
+):
+    if use_kv_cache :
+        model_input = ids if past is None else ids[:,-1:]
+        output = model(model_input,past_key_values=past,use_kv_cache=True)
+        logits = output.logits[0:-1].float()
+        new_past = output.past_key_values
+    else :
+        logits = model(ids).logits[0,-1].float()
+        new_past = None
+    
+    if temperature != 1.0 :
+        logits = logits / max(temperature,1e-6)
+    return F.softmax(logits, dim=-1),new_past
 
 
 def _all_token_probs(model: Module, ids: Tensor, temperature: float) -> Tensor:
@@ -53,6 +68,7 @@ def speculative_generate(
     max_new_tokens: int = 64,
     temperature: float = 1.0,
     eos_token_id: int | None = None,
+    use_kv_cache:bool=False,
 ) -> Tuple[Tensor, float]:
     """
     推测解码主循环（batch_size=1，首版不做 KV Cache，优先保证算法正确）。
@@ -74,8 +90,12 @@ def speculative_generate(
         draft_probs: List[Tensor] = []
         draft_prefix = output
 
+        past_draft = None
+
         for _ in range(K):
-            p = _next_token_probs(draft_model, draft_prefix, temperature)
+            p,past_draft = _next_token_probs(draft_model,
+             draft_prefix, temperature,past=past_draft,
+             use_kv_cache=use_kv_cache)
             tok = sample_from_probs(p)
             draft_tokens.append(tok)
             draft_probs.append(p)
@@ -100,6 +120,9 @@ def speculative_generate(
             pos = prefix_len + i - 1
             q = q_all[pos]
             p = draft_probs[i]
+            v = min(q.shape[-1],p.shape[-1])
+            q = q[:v]
+            p = p[:v]
             accept_prob = (q[tok] / (p[tok] + 1e-12)).clamp(max=1.0)
 
             if torch.rand((), device=device) < accept_prob:

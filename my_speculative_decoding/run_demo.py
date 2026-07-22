@@ -36,6 +36,8 @@ def main() -> None:
     draft = AutoModelForCausalLM.from_pretrained(DRAFT_NAME).to(device).eval()
     target = AutoModelForCausalLM.from_pretrained(TARGET_NAME).to(device).eval()
 
+    use_kv_cache = True
+
     input_ids = tokenizer(PROMPT, return_tensors="pt").input_ids.to(device)
 
     # warmup
@@ -48,6 +50,7 @@ def main() -> None:
         max_new_tokens=MAX_NEW_TOKENS,
         temperature=TEMPERATURE,
         eos_token_id=tokenizer.eos_token_id,
+        use_kv_cache=use_kv_cache,
     )
     t_ar = time.perf_counter() - t0
 
@@ -60,6 +63,7 @@ def main() -> None:
         max_new_tokens=MAX_NEW_TOKENS,
         temperature=TEMPERATURE,
         eos_token_id=tokenizer.eos_token_id,
+        use_kv_cache=use_kv_cache,
     )
     t_sd = time.perf_counter() - t0
 
