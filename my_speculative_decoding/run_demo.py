@@ -20,7 +20,7 @@ DRAFT_NAME = "gpt2"
 TARGET_NAME = "gpt2-medium"
 PROMPT = "Speculative decoding accelerates large language models by"
 MAX_NEW_TOKENS = 48
-K = 5
+K = 2
 TEMPERATURE = 0.7
 
 
@@ -36,7 +36,7 @@ def main() -> None:
     draft = AutoModelForCausalLM.from_pretrained(DRAFT_NAME).to(device).eval()
     target = AutoModelForCausalLM.from_pretrained(TARGET_NAME).to(device).eval()
 
-    use_kv_cache = True
+    use_kv_cache = False
 
     input_ids = tokenizer(PROMPT, return_tensors="pt").input_ids.to(device)
 

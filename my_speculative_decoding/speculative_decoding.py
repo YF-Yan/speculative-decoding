@@ -38,8 +38,8 @@ def _next_token_probs(
 ):
     if use_kv_cache :
         model_input = ids if past is None else ids[:,-1:]
-        output = model(model_input,past_key_values=past,use_kv_cache=True)
-        logits = output.logits[0:-1].float()
+        output = model(model_input,past_key_values=past,use_cache=True)
+        logits = output.logits[0,-1].float()
         new_past = output.past_key_values
     else :
         logits = model(ids).logits[0,-1].float()

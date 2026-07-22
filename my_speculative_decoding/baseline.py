@@ -24,7 +24,7 @@ def autoregressive_generate(
     past = None
     hidden_states = None
     for _ in range(max_new_tokens):
-        if use_kv_cahce : # 启用kvcache模块
+        if use_kv_cache : # 启用kvcache模块
             model_input = output if past is None else output[:,-1:]
             out = model(model_input, past_key_values=past,use_kv_cache=True)
             past = out.past_key_values
@@ -34,7 +34,7 @@ def autoregressive_generate(
 
         # 进行温度缩放
         if temperature != 1.0 :
-            logits = logits / max(temperature)
+            logits = logits / max(temperature,1e-6)
 
         # 依概率选词
         probs = F.softmax(logits,dim=-1)
